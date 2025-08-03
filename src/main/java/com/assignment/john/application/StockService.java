@@ -23,8 +23,7 @@ public class StockService {
     }
     public Flux<Stock> streamingStock(String name){
 
-        return Flux.interval(Duration.ofSeconds(1))
-                .flatMap(stock -> stockRepository.findByNameFirst(name));
+        return stockRepository.findByNameFirst(name);
     }
 
 }

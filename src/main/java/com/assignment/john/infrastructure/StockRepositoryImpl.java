@@ -18,6 +18,6 @@ public class StockRepositoryImpl implements StockRepository {
 
     @Override
     public Flux<Stock> findByNameFirst(String name) {
-        return mongoRepository.findFirstByNameOrderByCreatedAtDesc(name);
+        return mongoRepository.findByName(name);
     }
 }
