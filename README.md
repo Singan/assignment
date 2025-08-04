@@ -27,7 +27,7 @@ Spring Boot 기반의 주식 API 서버와 CORS 문제 해결을 위한 Next.js 
 
 ### 2. Next.js CORS 프록시 (프론트엔드 + 프록시)
 - **기술**: Next.js 14, TypeScript, Tailwind CSS
-- **포트**: 3000
+- **포트**: 3001
 - **기능**:
   - Spring Boot API 전용 프록시 엔드포인트
   - 범용 CORS 프록시
@@ -59,13 +59,13 @@ npm run dev
 
 #### 웹 인터페이스 접속
 ```
-http://localhost:3000
+http://localhost:3001
 ```
 
 #### API 사용 예시
 ```javascript
 // Spring Boot API를 프록시를 통해 호출
-const response = await fetch('http://localhost:3000/api/stocks?name=AAPL');
+const response = await fetch('http://localhost:3001/api/stocks?name=AAPL');
 const reader = response.body.getReader();
 
 while (true) {
@@ -83,7 +83,7 @@ while (true) {
 - `GET /stocks?name={stockName}` - 주식 스트리밍 데이터
 - `POST /stocks` - 주식 데이터 저장
 
-### Next.js 프록시 API (CORS 해결됨)
+### Next.js 프록시 API (CORS 해결됨, 포트 3001)
 - `GET /api/stocks?name={stockName}` - 주식 스트리밍 프록시
 - `POST /api/stocks` - 주식 저장 프록시
 - `GET /api/proxy?url={targetUrl}` - 범용 프록시
@@ -113,6 +113,7 @@ spring.data.mongodb.database=testdb
 ### Next.js (.env.local)
 ```env
 SPRING_BOOT_URL=http://localhost:8080
+# Next.js 프록시는 3001 포트에서 실행
 ```
 
 ## 📖 자세한 문서
