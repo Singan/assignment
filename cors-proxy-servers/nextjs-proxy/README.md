@@ -6,6 +6,8 @@ CORS 문제를 해결하기 위한 Next.js API Routes 기반 프록시 서버입
 
 - ✅ Next.js 14 App Router 사용
 - 🔄 API Routes를 이용한 서버사이드 프록시
+- 🏢 Spring Boot API 전용 엔드포인트 제공
+- 📊 Server-Sent Events (SSE) 스트리밍 지원
 - 🌐 범용 프록시 기능
 - 🎨 Tailwind CSS를 사용한 테스트 UI
 - 📱 반응형 웹 인터페이스
@@ -54,6 +56,31 @@ const response = await fetch('/api/v1/posts/1');
 const data = await response.json();
 ```
 
+#### Spring Boot Stock API 프록시
+
+```javascript
+// 주식 스트리밍 데이터 받기
+const response = await fetch('/api/stocks?name=AAPL');
+const reader = response.body.getReader();
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  
+  const chunk = new TextDecoder().decode(value);
+  console.log('Stock data:', chunk);
+}
+
+// 주식 데이터 저장
+const saveResponse = await fetch('/api/stocks', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ name: 'AAPL', price: 150.00 }),
+});
+```
+
 #### 헬스 체크
 
 ```javascript
@@ -65,6 +92,8 @@ const status = await response.json();
 
 | 엔드포인트 | 메서드 | 설명 |
 |-----------|-------|------|
+| `/api/stocks?name=<stock_name>` | GET | Spring Boot 주식 스트리밍 API |
+| `/api/stocks` | POST | Spring Boot 주식 저장 API |
 | `/api/health` | GET | 서버 상태 확인 |
 | `/api/v1/*` | ALL | API v1 프록시 (JSONPlaceholder) |
 | `/api/proxy?url=<target_url>` | ALL | 범용 프록시 |
@@ -73,6 +102,7 @@ const status = await response.json();
 
 | 변수명 | 설명 | 기본값 |
 |--------|------|--------|
+| `SPRING_BOOT_URL` | Spring Boot API 서버 URL | http://localhost:8080 |
 | `API_V1_TARGET` | API v1 프록시 대상 | https://jsonplaceholder.typicode.com |
 
 ## 프로젝트 구조
@@ -82,6 +112,8 @@ nextjs-proxy/
 ├── src/
 │   └── app/
 │       ├── api/
+│       │   ├── stocks/
+│       │   │   └── route.ts          # Spring Boot Stock API 프록시
 │       │   ├── health/
 │       │   │   └── route.ts          # 헬스 체크 API
 │       │   ├── proxy/
@@ -109,6 +141,7 @@ npm i -g vercel
 vercel
 
 # 환경 변수 설정
+vercel env add SPRING_BOOT_URL
 vercel env add API_V1_TARGET
 ```
 

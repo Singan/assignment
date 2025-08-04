@@ -39,6 +39,11 @@ export default function Home() {
 
   const testExamples = [
     {
+      name: 'Spring Boot Stock API',
+      url: 'http://localhost:8080/stocks?name=AAPL',
+      method: 'GET'
+    },
+    {
       name: 'JSONPlaceholder Posts',
       url: 'https://jsonplaceholder.typicode.com/posts/1',
       method: 'GET'
@@ -173,7 +178,17 @@ export default function Home() {
             </div>
 
             <div>
-              <h3 className="text-lg font-medium text-gray-900">3. 헬스 체크</h3>
+              <h3 className="text-lg font-medium text-gray-900">3. Spring Boot Stock API 프록시</h3>
+              <code className="block bg-gray-100 p-2 rounded text-sm mt-2">
+                fetch('/api/stocks?name=AAPL')
+              </code>
+              <p className="text-sm text-gray-600 mt-1">
+                Spring Boot API 서버의 주식 스트리밍 데이터를 프록시합니다.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">4. 헬스 체크</h3>
               <code className="block bg-gray-100 p-2 rounded text-sm mt-2">
                 fetch('/api/health')
               </code>
