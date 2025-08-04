@@ -39,9 +39,9 @@ export default function Home() {
 
   const testExamples = [
     {
-      name: 'Spring Boot Stock API',
-      url: 'http://localhost:8080/stocks?name=AAPL',
-      method: 'GET'
+              name: 'Spring Boot Stock API (via Proxy)',
+        url: 'http://localhost:3001/api/stocks?name=AAPL',
+        method: 'GET'
     },
     {
       name: 'JSONPlaceholder Posts',
