@@ -15,7 +15,7 @@ export interface StockConfig {
 }
 
 export const STOCK_CONFIGS: StockConfig[] = [
-  { symbol: 'SAMSUNG', name: '삼성전자', color: '#1f77b4' },
-  { symbol: 'LG', name: 'LG전자', color: '#ff7f0e' },
-  { symbol: 'SK', name: 'SK하이닉스', color: '#2ca02c' }
+  { symbol: 'Samsung Electronics', name: '삼성전자', color: '#1f77b4' },
+  { symbol: 'LG Electronics', name: 'LG전자', color: '#ff7f0e' },
+  { symbol: 'SK Hynix', name: 'SK하이닉스', color: '#2ca02c' }
 ];

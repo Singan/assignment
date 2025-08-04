@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { StockSelector } from './components/StockSelector';
 import { StockCard } from './components/StockCard';
 import { ConnectionStatus } from './components/ConnectionStatus';
+import { DebugPanel } from './components/DebugPanel';
 import { useStockStream } from './hooks/useStockStream';
 import './App.css';
 
@@ -75,7 +76,7 @@ function App() {
   
   const { stockData, isConnected, error } = useStockStream({
     selectedStocks,
-    proxyServerUrl: process.env.REACT_APP_PROXY_URL || 'http://localhost:3001'
+    proxyServerUrl: process.env.REACT_APP_PROXY_URL || 'http://localhost:3000'
   });
 
   const handleStockToggle = (symbol: string) => {
@@ -107,6 +108,12 @@ function App() {
             error={error}
           />
         )}
+
+        <DebugPanel
+          stockData={stockData}
+          isConnected={isConnected}
+          error={error}
+        />
 
         {stockDataArray.length > 0 ? (
           <StockGrid>
