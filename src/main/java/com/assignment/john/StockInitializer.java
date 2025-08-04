@@ -15,7 +15,7 @@ import java.util.Random;
 
 @Component
 @RequiredArgsConstructor
-//@Profile("dev")
+@Profile("dev")
 @Slf4j
 public class StockInitializer {
 
