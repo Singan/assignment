@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
 import { StockData } from '../types/stock';
 
 interface UseStockStreamProps {
@@ -9,76 +8,152 @@ interface UseStockStreamProps {
 
 export const useStockStream = ({ 
   selectedStocks, 
-  proxyServerUrl = 'http://localhost:3001' 
+  proxyServerUrl = 'http://localhost:3000' 
 }: UseStockStreamProps) => {
   const [stockData, setStockData] = useState<Record<string, StockData>>({});
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const socketRef = useRef<Socket | null>(null);
+  const eventSourcesRef = useRef<Record<string, EventSource>>({});
 
   useEffect(() => {
-    if (selectedStocks.length === 0) return;
+    // 기존 연결들 정리
+    Object.values(eventSourcesRef.current).forEach(eventSource => {
+      eventSource.close();
+    });
+    eventSourcesRef.current = {};
 
-    // 기존 소켓 연결 해제
-    if (socketRef.current) {
-      socketRef.current.disconnect();
+    if (selectedStocks.length === 0) {
+      setIsConnected(false);
+      setStockData({});
+      return;
     }
 
-    try {
-      // 새로운 소켓 연결 생성
-      socketRef.current = io(proxyServerUrl, {
-        transports: ['websocket', 'polling']
-      });
+    let connectedCount = 0;
+    const totalStocks = selectedStocks.length;
 
-      socketRef.current.on('connect', () => {
-        console.log('프록시 서버에 연결됨');
-        setIsConnected(true);
-        setError(null);
+    selectedStocks.forEach(symbol => {
+      try {
+        // SSE 연결 생성 - 프록시 서버의 /api/stocks 엔드포인트 사용
+        const eventSource = new EventSource(`${proxyServerUrl}/api/stocks?name=${encodeURIComponent(symbol)}`);
         
-        // 선택된 주식들을 구독
-        selectedStocks.forEach(symbol => {
-          socketRef.current?.emit('subscribe', symbol);
-        });
-      });
+        eventSourcesRef.current[symbol] = eventSource;
 
-      socketRef.current.on('disconnect', () => {
-        console.log('프록시 서버 연결 해제됨');
-        setIsConnected(false);
-      });
+        eventSource.onopen = () => {
+          console.log(`${symbol} SSE 연결 열림`);
+          connectedCount++;
+          if (connectedCount === totalStocks) {
+            setIsConnected(true);
+            setError(null);
+          }
+        };
 
-      socketRef.current.on('stockData', (data: StockData) => {
-        setStockData(prev => ({
-          ...prev,
-          [data.symbol]: data
-        }));
-      });
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            console.log(`${symbol} 데이터 수신:`, data);
+            
+            // 받은 데이터를 StockData 형식에 맞게 변환
+            const stockData: StockData = {
+              symbol: symbol,
+              name: data.name || symbol,
+              price: data.price || data.currentPrice || 0,
+              change: data.change || 0,
+              changePercent: data.changePercent || data.changePercentage || 0,
+              volume: data.volume || data.tradingVolume || 0,
+              timestamp: data.timestamp || Date.now()
+            };
 
-      socketRef.current.on('error', (err: any) => {
-        console.error('소켓 에러:', err);
-        setError('연결 오류가 발생했습니다.');
-      });
+            setStockData(prev => ({
+              ...prev,
+              [symbol]: stockData
+            }));
+          } catch (parseError) {
+            console.error(`${symbol} 데이터 파싱 오류:`, parseError);
+          }
+        };
 
-    } catch (err) {
-      console.error('소켓 연결 실패:', err);
-      setError('서버에 연결할 수 없습니다.');
-    }
+        eventSource.onerror = (err) => {
+          console.error(`${symbol} SSE 오류:`, err);
+          connectedCount = Math.max(0, connectedCount - 1);
+          
+          if (eventSource.readyState === EventSource.CLOSED) {
+            setError(`${symbol} 연결이 끊어졌습니다.`);
+          } else {
+            setError(`${symbol} 연결 오류가 발생했습니다.`);
+          }
+          
+          if (connectedCount === 0) {
+            setIsConnected(false);
+          }
+        };
+
+      } catch (err) {
+        console.error(`${symbol} SSE 연결 실패:`, err);
+        setError(`${symbol} 서버에 연결할 수 없습니다.`);
+      }
+    });
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
+      // 컴포넌트 언마운트 시 모든 SSE 연결 정리
+      Object.values(eventSourcesRef.current).forEach(eventSource => {
+        eventSource.close();
+      });
+      eventSourcesRef.current = {};
     };
   }, [selectedStocks, proxyServerUrl]);
 
   const subscribeToStock = (symbol: string) => {
-    if (socketRef.current && isConnected) {
-      socketRef.current.emit('subscribe', symbol);
+    if (!eventSourcesRef.current[symbol]) {
+      try {
+        const eventSource = new EventSource(`${proxyServerUrl}/api/stocks?name=${encodeURIComponent(symbol)}`);
+        eventSourcesRef.current[symbol] = eventSource;
+
+        eventSource.onopen = () => {
+          console.log(`${symbol} SSE 연결 열림`);
+          setIsConnected(true);
+          setError(null);
+        };
+
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            const stockData: StockData = {
+              symbol: symbol,
+              name: data.name || symbol,
+              price: data.price || data.currentPrice || 0,
+              change: data.change || 0,
+              changePercent: data.changePercent || data.changePercentage || 0,
+              volume: data.volume || data.tradingVolume || 0,
+              timestamp: data.timestamp || Date.now()
+            };
+
+            setStockData(prev => ({
+              ...prev,
+              [symbol]: stockData
+            }));
+          } catch (parseError) {
+            console.error(`${symbol} 데이터 파싱 오류:`, parseError);
+          }
+        };
+
+        eventSource.onerror = (err) => {
+          console.error(`${symbol} SSE 오류:`, err);
+          setError(`${symbol} 연결 오류가 발생했습니다.`);
+        };
+
+      } catch (err) {
+        console.error(`${symbol} SSE 연결 실패:`, err);
+        setError(`${symbol} 서버에 연결할 수 없습니다.`);
+      }
     }
   };
 
   const unsubscribeFromStock = (symbol: string) => {
-    if (socketRef.current && isConnected) {
-      socketRef.current.emit('unsubscribe', symbol);
+    if (eventSourcesRef.current[symbol]) {
+      eventSourcesRef.current[symbol].close();
+      delete eventSourcesRef.current[symbol];
+      
       setStockData(prev => {
         const newData = { ...prev };
         delete newData[symbol];
