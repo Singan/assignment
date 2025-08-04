@@ -60,18 +60,18 @@ SPRING_BOOT_URL=http://localhost:8080
 
 ### 서버 실행 후 사용 가능한 엔드포인트:
 
-- **웹 인터페이스**: `http://localhost:3000`
-- **헬스 체크**: `http://localhost:3000/api/health`
-- **Spring Boot Stock API**: `http://localhost:3000/api/stocks?name=AAPL`
-- **JSONPlaceholder API**: `http://localhost:3000/api/v1/posts/1`
-- **범용 프록시**: `http://localhost:3000/api/proxy?url=https://api.github.com/users/octocat`
+- **웹 인터페이스**: `http://localhost:3001`
+- **헬스 체크**: `http://localhost:3001/api/health`
+- **Spring Boot Stock API**: `http://localhost:3001/api/stocks?name=AAPL`
+- **JSONPlaceholder API**: `http://localhost:3001/api/v1/posts/1`
+- **범용 프록시**: `http://localhost:3001/api/proxy?url=https://api.github.com/users/octocat`
 
 ## 🔧 제공하는 기능
 
 ### 1. Spring Boot API 전용 프록시 (`/api/stocks`)
 Spring Boot 서버의 주식 API에 특화된 프록시:
-- **GET**: `http://localhost:3000/api/stocks?name=AAPL` - 주식 스트리밍 데이터
-- **POST**: `http://localhost:3000/api/stocks` - 주식 데이터 저장
+- **GET**: `http://localhost:3001/api/stocks?name=AAPL` - 주식 스트리밍 데이터
+- **POST**: `http://localhost:3001/api/stocks` - 주식 데이터 저장
 - Server-Sent Events (SSE) 스트리밍 지원
 - 자동 CORS 헤더 설정
 
@@ -98,9 +98,9 @@ Spring Boot 서버의 주식 API에 특화된 프록시:
 ### JavaScript/TypeScript에서 Spring Boot API 사용
 
 ```javascript
-// Spring Boot Stock API - 주식 스트리밍
+// Spring Boot Stock API - WebFlux 스트리밍 (Tailable Cursor)
 async function streamStock(stockName) {
-  const response = await fetch(`http://localhost:3000/api/stocks?name=${stockName}`);
+  const response = await fetch(`http://localhost:3001/api/stocks?name=${stockName}`);
   const reader = response.body.getReader();
   
   while (true) {
@@ -108,13 +108,13 @@ async function streamStock(stockName) {
     if (done) break;
     
     const chunk = new TextDecoder().decode(value);
-    console.log('Stock data:', chunk);
+    console.log('실시간 주식 데이터:', chunk);
   }
 }
 
 // Spring Boot Stock API - 주식 저장
 async function saveStock(stockData) {
-  const response = await fetch('http://localhost:3000/api/stocks', {
+  const response = await fetch('http://localhost:3001/api/stocks', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -126,7 +126,7 @@ async function saveStock(stockData) {
 
 // 범용 프록시 사용
 async function fetchWithProxy(targetUrl) {
-  const proxyUrl = `http://localhost:3000/api/proxy?url=${encodeURIComponent(targetUrl)}`;
+  const proxyUrl = `http://localhost:3001/api/proxy?url=${encodeURIComponent(targetUrl)}`;
   const response = await fetch(proxyUrl);
   return response.json();
 }
@@ -140,20 +140,20 @@ const githubUser = await fetchWithProxy('https://api.github.com/users/octocat');
 ### cURL 명령어 예시
 
 ```bash
-# Spring Boot Stock API - 스트리밍
-curl -N "http://localhost:3000/api/stocks?name=AAPL"
+# Spring Boot Stock API - WebFlux 스트리밍
+curl -N "http://localhost:3001/api/stocks?name=AAPL"
 
 # Spring Boot Stock API - 저장
 curl -X POST \
-  "http://localhost:3000/api/stocks" \
+  "http://localhost:3001/api/stocks" \
   -H "Content-Type: application/json" \
   -d '{"name": "AAPL", "price": 150.00}'
 
 # 헬스 체크
-curl http://localhost:3000/api/health
+curl http://localhost:3001/api/health
 
 # 범용 프록시
-curl "http://localhost:3000/api/proxy?url=https://api.github.com/users/octocat"
+curl "http://localhost:3001/api/proxy?url=https://api.github.com/users/octocat"
 ```
 
 ## 🌐 배포 가이드
@@ -208,7 +208,7 @@ SPRING_BOOT_URL=https://your-spring-boot-server.com
 
 Next.js 프록시는 브라우저에서 접근할 수 있는 테스트 인터페이스를 제공합니다:
 
-- **URL**: `http://localhost:3000`
+- **URL**: `http://localhost:3001`
 - **기능**:
   - 실시간 프록시 요청 테스트
   - Spring Boot API 예시 요청
@@ -225,8 +225,8 @@ Next.js 프록시는 브라우저에서 접근할 수 있는 테스트 인터페
    - 네트워크 연결 상태 확인
 
 2. **여전히 CORS 에러가 발생하는 경우**:
-   - Next.js 프록시 서버가 실행 중인지 확인
-   - 요청 URL이 올바른지 확인
+   - Next.js 프록시 서버가 3001 포트에서 실행 중인지 확인
+   - 요청 URL이 올바른지 확인 (http://localhost:3001/api/...)
    - 브라우저 개발자 도구에서 네트워크 탭 확인
 
 3. **스트리밍 데이터 문제**:

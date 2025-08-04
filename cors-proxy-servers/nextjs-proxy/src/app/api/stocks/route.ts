@@ -43,12 +43,14 @@ export async function GET(request: NextRequest) {
     
     console.log(`Stock 프록시 요청: GET -> ${targetUrl}`);
 
-    // Spring Boot API 호출
+    // WebFlux Tailable Cursor를 위한 최적화된 헤더 설정
     const response = await fetch(targetUrl, {
       method: 'GET',
       headers: {
         'Accept': 'text/event-stream',
         'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no', // Nginx 버퍼링 비활성화
       },
     });
 
@@ -56,15 +58,47 @@ export async function GET(request: NextRequest) {
       throw new Error(`Spring Boot API 응답 에러: ${response.status} ${response.statusText}`);
     }
 
-    // SSE 스트림을 그대로 전달
+    // WebFlux 스트림을 위한 최적화된 SSE 헤더
     const responseHeaders = new Headers(corsHeaders);
-    responseHeaders.set('Content-Type', 'text/event-stream');
-    responseHeaders.set('Cache-Control', 'no-cache');
+    responseHeaders.set('Content-Type', 'text/event-stream; charset=utf-8');
+    responseHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     responseHeaders.set('Connection', 'keep-alive');
+    responseHeaders.set('X-Accel-Buffering', 'no');
+    responseHeaders.set('Transfer-Encoding', 'chunked');
 
-    console.log(`Stock 프록시 응답: ${response.status} for ${stockName}`);
+    console.log(`WebFlux Stock 스트림 시작: ${stockName}`);
 
-    return new Response(response.body, {
+    // 스트림을 직접 전달하되 에러 처리를 추가
+    const transformedStream = new ReadableStream({
+      start(controller) {
+        const reader = response.body?.getReader();
+        if (!reader) {
+          controller.close();
+          return;
+        }
+
+        function pump() {
+          return reader.read().then(({ done, value }) => {
+            if (done) {
+              console.log(`WebFlux Stock 스트림 종료: ${stockName}`);
+              controller.close();
+              return;
+            }
+            
+            // WebFlux에서 오는 데이터를 그대로 전달
+            controller.enqueue(value);
+            return pump();
+          }).catch(err => {
+            console.error(`WebFlux Stock 스트림 에러: ${stockName}`, err);
+            controller.error(err);
+          });
+        }
+
+        pump();
+      }
+    });
+
+    return new Response(transformedStream, {
       status: response.status,
       statusText: response.statusText,
       headers: responseHeaders,
