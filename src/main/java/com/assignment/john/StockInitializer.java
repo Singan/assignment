@@ -1,5 +1,6 @@
 package com.assignment.john;
 
+import com.assignment.john.application.StockService;
 import com.assignment.john.domain.Stock;
 import com.assignment.john.infrastructure.StockRepository;
 import jakarta.annotation.PostConstruct;
@@ -19,7 +20,7 @@ import java.util.Random;
 @Slf4j
 public class StockInitializer {
 
-    private final StockRepository stockRepository;
+    private final StockService stockService;
 
     private final Random random = new Random();
 
@@ -36,7 +37,7 @@ public class StockInitializer {
                     .dividend(dividend)
                     .build();
             log.info("stock 스케쥴러 : {}" , stock);
-            stockRepository.saveStock(stock).subscribe();
+            stockService.stockSave(stock).subscribe();
         }
     }
 }
