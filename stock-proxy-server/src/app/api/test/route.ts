@@ -4,9 +4,12 @@ export async function GET(request: NextRequest) {
   try {
     // Spring Boot 서버 연결 테스트
     // /api/proxy/stocks/sse -> /stocks/sse로 리라이팅하여 테스트
-    const springUrl = 'http://localhost:8080/stocks/sse?name=삼성전자';
+    const stockName = '삼성전자';
+    const encodedStockName = encodeURIComponent(stockName);
+    const springUrl = `http://localhost:8080/stocks/sse?name=${encodedStockName}`;
     
     console.log(`[Test] Testing connection to Spring Boot: ${springUrl}`);
+    console.log(`[Test] Stock name: "${stockName}" -> Encoded: "${encodedStockName}"`);
     
     const response = await fetch(springUrl, {
       method: 'GET',
@@ -14,6 +17,7 @@ export async function GET(request: NextRequest) {
         'Accept': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
+        'User-Agent': 'Stock-Proxy-Server/1.0',
       },
     });
 
@@ -23,7 +27,9 @@ export async function GET(request: NextRequest) {
         status: 'success',
         message: 'Spring Boot server is connected',
         springBootUrl: springUrl,
-        proxyUrl: 'http://localhost:3001/api/proxy/stocks/sse?name=삼성전자',
+        proxyUrl: `http://localhost:3001/api/proxy/stocks/sse?name=${encodedStockName}`,
+        stockName: stockName,
+        encodedStockName: encodedStockName,
         timestamp: new Date().toISOString(),
       });
     } else {
@@ -32,6 +38,8 @@ export async function GET(request: NextRequest) {
         status: 'error',
         message: 'Spring Boot server is not responding',
         statusCode: response.status,
+        stockName: stockName,
+        encodedStockName: encodedStockName,
         timestamp: new Date().toISOString(),
       }, { status: 503 });
     }

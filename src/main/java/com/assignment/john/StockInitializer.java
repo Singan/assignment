@@ -25,7 +25,7 @@ public class StockInitializer {
     private final Random random = new Random();
 
     private final String[] names = {"SK", "삼성전자", "LG"};
-    @Scheduled(fixedRate = 10000)
+    @Scheduled(fixedRate = 3000)
     public void saveRandomStocks() {
         for (String name : names) {
             int currentPrice = 500 + random.nextInt(500);

@@ -3,43 +3,51 @@ import { StockProvider, useStockContext } from './context/StockContext';
 import { StockToggle } from './components/StockToggle';
 import { StockCard } from './components/StockCard';
 import { StockList } from './components/StockList';
-import { generateMockStockData, updateStockPrice, generatePriceHistory, resetPrices } from './services/mockStockService';
 import { Stock } from './types/stock';
 
 function StockDashboard() {
-  const { state, updateStockData, addPriceHistory, initializeStocks } = useStockContext();
+  const { state, updateStockData, addPriceHistory, initializeStocks, testConnection } = useStockContext();
   const [isRunning, setIsRunning] = useState(false);
 
-  // 초기 주식 데이터 설정
+  // 컴포넌트 마운트 시 프록시 서버 연결 테스트
   useEffect(() => {
-    resetPrices(); // 가격 상태 초기화
-    const initialStocks = generateMockStockData();
-    initializeStocks(initialStocks);
-  }, []); // 의존성 배열을 빈 배열로 변경
+    testConnection();
+  }, []);
 
-  // 1초마다 현재가를 바꾸고 히스토리에 추가
+  // 선택된 주식이 변경될 때마다 실행 상태 업데이트
   useEffect(() => {
-    if (!state.selectedStock) {
+    if (state.selectedStock && state.isConnected) {
+      setIsRunning(true);
+    } else {
       setIsRunning(false);
-      return;
     }
+  }, [state.selectedStock, state.isConnected]);
 
-    setIsRunning(true);
-    const interval = setInterval(() => {
-      // 1초마다 현재가를 실제로 바꿈
-      const updatedStock = updateStockPrice(state.selectedStock!);
-      updateStockData(updatedStock);
-      
-      // 바뀐 데이터를 히스토리에 추가
-      const history = generatePriceHistory(updatedStock);
-      addPriceHistory(history);
-    }, 1000);
+  const getConnectionStatusText = () => {
+    switch (state.connectionStatus) {
+      case 'connecting':
+        return '프록시 서버 연결 중...';
+      case 'connected':
+        return '프록시 서버 연결됨';
+      case 'error':
+        return '프록시 서버 연결 실패';
+      default:
+        return '연결 대기 중';
+    }
+  };
 
-    return () => {
-      clearInterval(interval);
-      setIsRunning(false);
-    };
-  }, [state.selectedStock?.id]); // selectedStock.id만 의존성으로 사용
+  const getConnectionStatusColor = () => {
+    switch (state.connectionStatus) {
+      case 'connecting':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'connected':
+        return 'bg-green-100 text-green-800';
+      case 'error':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -50,8 +58,35 @@ function StockDashboard() {
             📈 실시간 주식 모니터링
           </h1>
           <p className="text-gray-600">
-            원하는 주식을 선택하여 실시간 가격 변화를 확인하세요
+            프록시 서버를 통해 Spring Boot의 실시간 주식 데이터를 확인하세요
           </p>
+        </div>
+
+        {/* 프록시 서버 연결 상태 */}
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-800">프록시 서버 상태</h2>
+            <button
+              onClick={testConnection}
+              disabled={state.connectionStatus === 'connecting'}
+              className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              {state.connectionStatus === 'connecting' ? '연결 중...' : '연결 테스트'}
+            </button>
+          </div>
+          <div className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium ${getConnectionStatusColor()}`}>
+            <span className={`w-2 h-2 rounded-full mr-2 ${
+              state.connectionStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' :
+              state.connectionStatus === 'connected' ? 'bg-green-500' :
+              state.connectionStatus === 'error' ? 'bg-red-500' : 'bg-gray-500'
+            }`}></span>
+            {getConnectionStatusText()}
+          </div>
+          {state.connectionStatus === 'error' && (
+            <p className="text-red-600 text-sm mt-2">
+              프록시 서버(localhost:3001)가 실행 중인지 확인해주세요.
+            </p>
+          )}
         </div>
 
         {/* 토글 버튼들 */}
@@ -67,6 +102,11 @@ function StockDashboard() {
               />
             ))}
           </div>
+          {!state.isConnected && (
+            <p className="text-orange-600 text-sm mt-3">
+              ⚠️ 프록시 서버에 연결된 후 주식을 선택해주세요.
+            </p>
+          )}
         </div>
 
         {/* 실시간 상태 표시 */}
@@ -78,7 +118,7 @@ function StockDashboard() {
               <span className={`w-2 h-2 rounded-full mr-2 ${
                 isRunning ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
               }`}></span>
-              {isRunning ? '실시간 업데이트 중...' : '대기 중'}
+              {isRunning ? '실시간 SSE 데이터 수신 중...' : '대기 중'}
             </span>
           </div>
         )}
@@ -103,7 +143,7 @@ function StockDashboard() {
               주식을 선택해주세요
             </h3>
             <p className="text-gray-500">
-              위의 토글 버튼을 클릭하여 모니터링할 주식을 선택하세요.
+              프록시 서버에 연결한 후 위의 토글 버튼을 클릭하여 모니터링할 주식을 선택하세요.
             </p>
           </div>
         )}
